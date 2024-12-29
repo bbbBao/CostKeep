@@ -21,23 +21,37 @@ struct ContentView: View {
     }
 }
 
-struct Receipt: Identifiable {
+struct Receipt: Identifiable, Codable {
     let id = UUID()
     let date: Date
     let total: Double
     let items: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case id, date, total, items
+    }
 }
 
 struct ReceiptRow: View {
     let receipt: Receipt
     
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(receipt.date, style: .date)
                 .font(.headline)
             Text("Total: $\(String(format: "%.2f", receipt.total))")
                 .font(.subheadline)
+            if !receipt.items.isEmpty {
+                Text("Items:")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                ForEach(receipt.items, id: \.self) { item in
+                    Text("• \(item)")
+                        .font(.caption)
+                }
+            }
         }
+        .padding(.vertical, 4)
     }
 }
 

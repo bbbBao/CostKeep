@@ -56,12 +56,20 @@
 			);
 			target = 452432EC2D2169AF002051A5 /* CostKeepUITests */;
 		};
+		45F916592D2198B500854024 /* Exceptions for "CostKeep" folder in "CostKeep" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 452432D22D2169AD002051A5 /* CostKeep */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		452432D52D2169AD002051A5 /* CostKeep */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				45F916592D2198B500854024 /* Exceptions for "CostKeep" folder in "CostKeep" target */,
 				452433042D216B1F002051A5 /* Exceptions for "CostKeep" folder in "CostKeepTests" target */,
 				452433052D216B1F002051A5 /* Exceptions for "CostKeep" folder in "CostKeepUITests" target */,
 			);
@@ -447,12 +455,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CostKeep/CostKeep.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"CostKeep/Preview Content\"";
 				DEVELOPMENT_TEAM = N5NK24SJF3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CostKeep/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan receipts for expense tracking.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -477,12 +487,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CostKeep/CostKeep.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"CostKeep/Preview Content\"";
 				DEVELOPMENT_TEAM = N5NK24SJF3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CostKeep/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan receipts for expense tracking.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
