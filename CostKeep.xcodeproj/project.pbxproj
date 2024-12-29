@@ -15,6 +15,7 @@
 		452433122D2170B4002051A5 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 452433112D2170B4002051A5 /* FirebaseVertexAI */; };
 		452433182D217482002051A5 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 452433172D217482002051A5 /* FirebaseStorage */; };
 		4524331A2D2174A4002051A5 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 452433192D2174A4002051A5 /* FirebaseFirestore */; };
+		45F916532D2191DA00854024 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 45F916522D2191DA00854024 /* FirebaseAuth */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +89,7 @@
 				452433122D2170B4002051A5 /* FirebaseVertexAI in Frameworks */,
 				452433082D216BE5002051A5 /* FirebaseAnalytics in Frameworks */,
 				452433102D216BE5002051A5 /* FirebaseAppDistribution-Beta in Frameworks */,
+				45F916532D2191DA00854024 /* FirebaseAuth in Frameworks */,
 				452433182D217482002051A5 /* FirebaseStorage in Frameworks */,
 				4524331A2D2174A4002051A5 /* FirebaseFirestore in Frameworks */,
 				4524330C2D216BE5002051A5 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
@@ -160,6 +162,7 @@
 				452433112D2170B4002051A5 /* FirebaseVertexAI */,
 				452433172D217482002051A5 /* FirebaseStorage */,
 				452433192D2174A4002051A5 /* FirebaseFirestore */,
+				45F916522D2191DA00854024 /* FirebaseAuth */,
 			);
 			productName = CostKeep;
 			productReference = 452432D32D2169AD002051A5 /* CostKeep.app */;
@@ -663,6 +666,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 452433062D216BE5002051A5 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		45F916522D2191DA00854024 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 452433062D216BE5002051A5 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
