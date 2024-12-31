@@ -6,5 +6,7 @@
 	<dict/>
 	<key>com.apple.developer.device-check.team-identifier</key>
 	<string>N5NK24SJF3</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 </dict>
 </plist>

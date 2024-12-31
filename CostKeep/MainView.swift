@@ -55,7 +55,7 @@ struct MainView: View {
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedImage)
             }
-            .onChange(of: selectedImage) { newImage in
+            .onChange(of: selectedImage) { oldImage, newImage in
                 if let image = newImage {
                     processReceipt(image)
                 }
@@ -73,6 +73,20 @@ struct MainView: View {
                 #if DEBUG
                 AppCheckDebugHelper.getDebugToken()
                 #endif
+            }
+        }
+        .task {
+            if authService.isAuthenticated {
+                await loadReceipts()
+            }
+        }
+        .onChange(of: authService.isAuthenticated) { oldValue, newValue in
+            if newValue {
+                Task {
+                    await loadReceipts()
+                }
+            } else {
+                scannedReceipts = []
             }
         }
     }
@@ -105,6 +119,16 @@ struct MainView: View {
                     errorMessage = error.localizedDescription
                     isProcessing = false
                 }
+            }
+        }
+    }
+    
+    private func loadReceipts() async {
+        do {
+            scannedReceipts = try await FirebaseService.shared.fetchReceipts()
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
             }
         }
     }

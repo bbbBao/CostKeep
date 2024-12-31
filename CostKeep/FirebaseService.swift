@@ -51,7 +51,7 @@ class FirebaseService {
     
     func processReceiptImage(_ image: UIImage) async throws -> Receipt {
         // Upload image to Firebase Storage
-        let imageUrl = try await uploadReceiptImage(image)
+        _ = try await uploadReceiptImage(image)
         
         let prompt = """
         This is a receipt image. Please extract the following information:
@@ -129,11 +129,38 @@ class FirebaseService {
     }
     
     func saveReceipt(_ receipt: Receipt) async throws {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "FirebaseService", code: 2, 
+                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
         try await db.collection("receipts").document(receipt.id.uuidString).setData([
+            "userId": userId,
             "date": receipt.date,
             "total": receipt.total,
             "items": receipt.items
         ])
+    }
+    
+    func fetchReceipts() async throws -> [Receipt] {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "FirebaseService", code: 2, 
+                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        let snapshot = try await db.collection("receipts")
+            .whereField("userId", isEqualTo: userId)
+            .order(by: "date", descending: true)
+            .getDocuments()
+        
+        return snapshot.documents.map { document in
+            let data = document.data()
+            let date = (data["date"] as? Timestamp)?.dateValue() ?? Date()
+            let total = data["total"] as? Double ?? 0.0
+            let items = data["items"] as? [String] ?? []
+            
+            return Receipt(date: date, total: total, items: items)
+        }
     }
 }
 
