@@ -51,7 +51,7 @@ struct ReceiptsListView: View {
                         // Time Column
                         VStack(alignment: .leading, spacing: 24) {
                             ForEach(receipts) { receipt in
-                                Text(receipt.date.formatted(.dateTime.hour().minute()))
+                                Text(receipt.date.formatted(date: .omitted, time: .shortened))
                                     .font(.system(size: 16))
                                     .padding(.vertical, 32)
                             }

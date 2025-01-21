@@ -21,6 +21,10 @@ struct MainView: View {
         }
     }
     
+    var sortedReceipts: [Receipt] {
+        receipts.sorted { $0.date > $1.date }
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -87,7 +91,7 @@ struct MainView: View {
                 CalendarView(selectedDate: $selectedDate)
                     .padding(.vertical)
                 
-                ReceiptsListView(receipts: receipts)
+                ReceiptsListView(receipts: sortedReceipts)
                 // Custom Tab Bar
                 HStack {
                     Button(action: {}) {

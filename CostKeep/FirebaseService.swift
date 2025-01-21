@@ -73,13 +73,13 @@ class FirebaseService: ObservableObject {
         let prompt = """
         This is a receipt image. Please extract the following information:
         1. Store name (if not clear, use "Unknown Shop")
-        2. Date of purchase (format as YYYY-MM-DD, for example 2024-03-21)
+        2. Date and time of purchase (format as YYYY-MM-DD HH:mm, for example 2024-03-21 14:30)
         3. Total amount
         4. List of items with their prices
         Format the response as JSON with the following structure:
         {
             "storeName": "Store Name",
-            "date": "YYYY-MM-DD",
+            "date": "YYYY-MM-DD HH:mm",
             "total": 00.00,
             "items": [
                 {"name": "item name", "price": 00.00}
@@ -129,16 +129,16 @@ class FirebaseService: ObservableObject {
             // Try multiple date format parsers
             let iso8601Formatter = ISO8601DateFormatter()
             
-            let ymdFormatter = DateFormatter()
-            ymdFormatter.dateFormat = "yyyy-MM-dd"
+            let ymdhmFormatter = DateFormatter()
+            ymdhmFormatter.dateFormat = "yyyy-MM-dd HH:mm"
             
-            let mdyFormatter = DateFormatter()
-            mdyFormatter.dateFormat = "MM/dd/yyyy"
+            let mdyhmFormatter = DateFormatter()
+            mdyhmFormatter.dateFormat = "MM/dd/yyyy HH:mm"
             
-            let dmyFormatter = DateFormatter()
-            dmyFormatter.dateFormat = "dd/MM/yyyy"
+            let dmyhmFormatter = DateFormatter()
+            dmyhmFormatter.dateFormat = "dd/MM/yyyy HH:mm"
             
-            let formatters: [Any] = [iso8601Formatter, ymdFormatter, mdyFormatter, dmyFormatter]
+            let formatters: [Any] = [iso8601Formatter, ymdhmFormatter, mdyhmFormatter, dmyhmFormatter]
             
             // Try each formatter
             for formatter in formatters {
@@ -171,17 +171,16 @@ class FirebaseService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        // Convert the date to start of day in UTC
-        let calendar = Calendar.current
-        let dateStart = calendar.startOfDay(for: receipt.date)
-        
-        try await db.collection("receipts").document(receipt.id).setData([
-            "userId": userId,
-            "date": Timestamp(date: dateStart),  // Use Timestamp instead of Date
+        // Use the exact date-time from the receipt instead of converting to start of day
+        let receiptData: [String: Any] = [
+            "date": receipt.date,  // This preserves the full date-time
             "total": receipt.total,
             "items": receipt.items,
-            "storeName": receipt.storeName
-        ])
+            "storeName": receipt.storeName,
+            "userId": userId
+        ]
+        
+        try await db.collection("receipts").document(receipt.id).setData(receiptData)
     }
     
     func fetchReceipts(from startDate: Date = Date.distantPast, 
