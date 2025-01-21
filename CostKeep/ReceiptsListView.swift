@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ReceiptsListView: View {
     let receipts: [Receipt]
+    let onReceiptDeleted: () -> Void
     @State private var showHint = true
     
     let noReceiptsMessages = [
@@ -65,8 +66,12 @@ struct ReceiptsListView: View {
                             // Receipts Column
                             VStack(alignment: .leading, spacing: 16) {
                                 ForEach(Array(receipts.enumerated()), id: \.element.id) { index, receipt in
-                                    ReceiptCardView(receipt: receipt, isFirst: index == 0)
-                                        .padding(.horizontal)
+                                    ReceiptCardView(
+                                        receipt: receipt, 
+                                        isFirst: index == 0,
+                                        onDelete: onReceiptDeleted
+                                    )
+                                    .padding(.horizontal)
                                 }
                             }
                         }

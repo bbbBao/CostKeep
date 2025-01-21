@@ -236,6 +236,15 @@ class FirebaseService: ObservableObject {
             currency: "$"
         )
     }
+    
+    func deleteReceipt(_ receiptId: String) async throws {
+        guard (Auth.auth().currentUser?.uid) != nil else {
+            throw NSError(domain: "FirebaseService", code: 2, 
+                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        try await db.collection("receipts").document(receiptId).delete()
+    }
 }
 
 // Add this extension to support multiple date formats

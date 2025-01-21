@@ -91,7 +91,9 @@ struct MainView: View {
                 CalendarView(selectedDate: $selectedDate)
                     .padding(.vertical)
                 
-                ReceiptsListView(receipts: sortedReceipts)
+                ReceiptsListView(receipts: sortedReceipts) { 
+                    loadReceiptsForDate(selectedDate)
+                }
                 // Custom Tab Bar
                 HStack {
                     Button(action: {}) {
