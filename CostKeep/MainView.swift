@@ -1,138 +1,147 @@
-//
-//  ContentView.swift
-//  CostKeep
-//
-//  Created by Tianyi Bao on 12/29/24.
-//
-
 import SwiftUI
 
 struct MainView: View {
+    @StateObject private var authService = AuthService.shared
+    @State private var selectedDate = Date()
+    @State private var receipts: [Receipt] = []
     @State private var showImagePicker = false
+    @State private var showProfile = false
     @State private var selectedImage: UIImage?
-    @State private var scannedReceipts: [Receipt] = []
     @State private var isProcessing = false
     @State private var errorMessage: String?
-    @StateObject private var authService = AuthService.shared
+    
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 0..<12: return "Good Morning"
+        case 12..<17: return "Good Afternoon"
+        default: return "Good Evening"
+        }
+    }
     
     var body: some View {
         NavigationView {
-            VStack {
-                Button(action: {
-                    showImagePicker = true
-                }) {
-                    Text("Scan Receipt")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isProcessing ? Color.gray : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                .disabled(isProcessing)
-                
-                if isProcessing {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .padding()
-                        Text("Processing Receipt...")
-                            .foregroundColor(.gray)
+            VStack(spacing: 0) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(greeting),")
+                        .font(.title)
+                    if let user = authService.currentUser {
+                        Text(user.email?.components(separatedBy: "@").first ?? "User")
+                            .font(.title)
+                            .fontWeight(.bold)
                     }
-                    .frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                
+                // Add Calendar View
+                CalendarView(selectedDate: $selectedDate)
+                    .padding(.bottom)
+                
+                // Receipts List Header
+                HStack {
+                    Text("Time")
+                        .foregroundColor(.gray)
+                    Text("Receipts")
+                        .foregroundColor(.gray)
+                        .padding(.leading)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
+                // Receipts List
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(receipts) { receipt in
+                            ReceiptCardView(receipt: receipt)
+                        }
+                    }
                     .padding()
                 }
                 
-                List(scannedReceipts) { receipt in
-                    ReceiptRow(receipt: receipt)
+                // Tab Bar
+                HStack {
+                    Button(action: {}) {
+                        Image(systemName: "house.fill")
+                            .foregroundColor(.blue)
+                    }
+                    Spacer()
+                    Button(action: { showImagePicker = true }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.blue)
+                    }
+                    Spacer()
+                    Button(action: { showProfile = true }) {
+                        Image(systemName: "person")
+                            .foregroundColor(.gray)
+                    }
                 }
-                
-                Button(action: signOut) {
-                    Text("Sign Out")
-                        .foregroundColor(.red)
-                }
-            }
-            .navigationTitle("CostKeep")
-            .sheet(isPresented: $showImagePicker) {
-                ImagePicker(image: $selectedImage)
-            }
-            .onChange(of: selectedImage) { oldImage, newImage in
-                if let image = newImage {
-                    processReceipt(image)
-                }
-            }
-            .alert("Error", isPresented: .constant(errorMessage != nil)) {
-                Button("OK") {
-                    errorMessage = nil
-                }
-            } message: {
-                if let error = errorMessage {
-                    Text(error)
-                }
-            }
-            .onAppear {
-                #if DEBUG
-                AppCheckDebugHelper.getDebugToken()
-                #endif
+                .padding()
             }
         }
-        .task {
-            if authService.isAuthenticated {
-                await loadReceipts()
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $selectedImage)
+        }
+        .sheet(isPresented: $showProfile) {
+            UserProfileView()
+        }
+        .onChange(of: selectedImage) { oldImage, newImage in
+            if let image = newImage {
+                processSelectedImage(image)
             }
         }
-        .onChange(of: authService.isAuthenticated) { oldValue, newValue in
-            if newValue {
-                Task {
-                    await loadReceipts()
-                }
-            } else {
-                scannedReceipts = []
-            }
-        }
-    }
-    private func signOut() {
-        do {
-            try authService.signOut()
-        } catch {
-            errorMessage = error.localizedDescription
+        .onChange(of: selectedDate) { oldValue, newValue in
+            loadReceiptsForDate(newValue)
         }
     }
     
-    private func processReceipt(_ image: UIImage) {
-        guard authService.isAuthenticated else {
-            errorMessage = "Please sign in to upload receipts"
-            return
-        }
-        
-        isProcessing = true
-        
+    private func processSelectedImage(_ image: UIImage) {
+        print("Debug: Starting image processing")
         Task {
+            isProcessing = true
             do {
+                print("Debug: Calling Firebase service")
                 let receipt = try await FirebaseService.shared.processReceiptImage(image)
+                print("Debug: Receipt processed successfully")
                 try await FirebaseService.shared.saveReceipt(receipt)
+                print("Debug: Receipt saved to database")
+                
                 await MainActor.run {
-                    scannedReceipts.insert(receipt, at: 0)
+                    selectedImage = nil
                     isProcessing = false
+                    // Reload receipts for the current date
+                    loadReceiptsForDate(selectedDate)
                 }
             } catch {
+                print("Debug: Error processing image: \(error)")
                 await MainActor.run {
                     errorMessage = error.localizedDescription
+                    selectedImage = nil
                     isProcessing = false
                 }
             }
         }
     }
     
-    private func loadReceipts() async {
-        do {
-            scannedReceipts = try await FirebaseService.shared.fetchReceipts(from: Date.distantPast, to: Date())
-        } catch {
-            await MainActor.run {
-                errorMessage = error.localizedDescription
+    private func loadReceiptsForDate(_ date: Date) {
+        Task {
+            do {
+                let dateStart = Calendar.current.startOfDay(for: date)
+                let dateEnd = Calendar.current.date(byAdding: .day, value: 1, to: dateStart)!
+                
+                let loadedReceipts = try await FirebaseService.shared.fetchReceipts(
+                    from: dateStart,
+                    to: dateEnd
+                )
+                
+                await MainActor.run {
+                    receipts = loadedReceipts.sorted(by: { $0.date > $1.date })
+                }
+            } catch {
+                print("Error loading receipts: \(error)")
             }
         }
     }
-}
-
-
-
+} 
