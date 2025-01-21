@@ -9,8 +9,8 @@ struct ReceiptCardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(receipt.storeName)
                     .font(.system(size: 24, weight: .bold))
-                Text("$ \(String(format: "%.0f", receipt.total))")
-                    .font(.system(size: 24, weight: .bold))
+                Text("\(receipt.currency)\(String(format: "%.0f", receipt.total))")
+                .font(.system(size: 24, weight: .semibold))
             }
             
             Spacer()

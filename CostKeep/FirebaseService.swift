@@ -19,6 +19,7 @@ class FirebaseService: ObservableObject {
         let storeName: String
         let date: String
         let total: Double
+        let currency: String
         let items: [ItemJSON]
         
         struct ItemJSON: Codable {
@@ -75,12 +76,14 @@ class FirebaseService: ObservableObject {
         1. Store name (if not clear, use "Unknown Shop")
         2. Date and time of purchase (format as YYYY-MM-DD HH:mm, for example 2024-03-21 14:30)
         3. Total amount
-        4. List of items with their prices
+        4. Currency symbol (e.g., $, ¥, €, £)
+        5. List of items with their prices
         Format the response as JSON with the following structure:
         {
             "storeName": "Store Name",
             "date": "YYYY-MM-DD HH:mm",
             "total": 00.00,
+            "currency": "$",
             "items": [
                 {"name": "item name", "price": 00.00}
             ]
@@ -151,7 +154,8 @@ class FirebaseService: ObservableObject {
                         date: date,
                         total: json.total,
                         items: items,
-                        storeName: json.storeName
+                        storeName: json.storeName,
+                        currency: json.currency
                     )
                 }
             }
@@ -177,6 +181,7 @@ class FirebaseService: ObservableObject {
             "total": receipt.total,
             "items": receipt.items,
             "storeName": receipt.storeName,
+            "currency": receipt.currency,
             "userId": userId
         ]
         
@@ -205,7 +210,8 @@ class FirebaseService: ObservableObject {
             guard let timestamp = data["date"] as? Timestamp,
                   let total = data["total"] as? Double,
                   let items = data["items"] as? [String],
-                  let storeName = data["storeName"] as? String else {
+                  let storeName = data["storeName"] as? String,
+                  let currency = data["currency"] as? String else {
                 return nil
             }
             return Receipt(
@@ -213,7 +219,8 @@ class FirebaseService: ObservableObject {
                 date: timestamp.dateValue(),
                 total: total,
                 items: items,
-                storeName: storeName
+                storeName: storeName,
+                currency: currency
             )
         }
     }
@@ -225,7 +232,8 @@ class FirebaseService: ObservableObject {
             date: Date(),
             total: 0.0,
             items: [],
-            storeName: "Processing..."
+            storeName: "Processing...",
+            currency: "$"
         )
     }
 }

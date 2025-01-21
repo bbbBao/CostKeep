@@ -207,14 +207,16 @@ struct MainView: View {
                         date: dateStart,
                         total: 85.99,
                         items: ["Groceries ($45.99)", "Electronics ($40.00)"],
-                        storeName: "Walmart"
+                        storeName: "Walmart",
+                        currency: "¥"
                     )
                     let dummyReceipt1 = Receipt(
                         id: "test-1234",
                         date: dateStart,
                         total: 12.4,
-                        items: ["Condoms ($12.99)", "Electronics ($40.00)", "Games ($40.00)", "Meat ($40.00)"],
-                        storeName: "Costco"
+                        items: ["Food ($12.99)", "Electronics ($40.00)", "Games ($40.00)", "Meat ($40.00)"],
+                        storeName: "Costco",
+                        currency: "$"
                     )
                     allReceipts += [dummyReceipt, dummyReceipt1]
                 }
