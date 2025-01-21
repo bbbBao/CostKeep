@@ -16,6 +16,7 @@ class FirebaseService: ObservableObject {
     
     // Add this struct definition at the top level of the file, after the class declaration
     struct ReceiptJSON: Codable {
+        let storeName: String
         let date: String
         let total: Double
         let items: [ItemJSON]
@@ -71,11 +72,13 @@ class FirebaseService: ObservableObject {
         
         let prompt = """
         This is a receipt image. Please extract the following information:
-        1. Date of purchase
-        2. Total amount
-        3. List of items with their prices
+        1. Store name (if not clear, use "Unknown Shop")
+        2. Date of purchase (format as YYYY-MM-DD, for example 2024-03-21)
+        3. Total amount
+        4. List of items with their prices
         Format the response as JSON with the following structure:
         {
+            "storeName": "Store Name",
             "date": "YYYY-MM-DD",
             "total": 00.00,
             "items": [
@@ -90,6 +93,8 @@ class FirebaseService: ObservableObject {
                 throw NSError(domain: "FirebaseService", code: 4, 
                             userInfo: [NSLocalizedDescriptionKey: "Failed to get response from Vertex AI"])
             }
+            
+            print("Debug - Raw JSON response: \(jsonString)")
             
             return try parseReceiptJSON(jsonString)
         } catch {
@@ -121,20 +126,39 @@ class FirebaseService: ObservableObject {
     
     func parseReceipt(from json: ReceiptJSON) throws -> Receipt {
         do {
-            guard let date = ISO8601DateFormatter().date(from: json.date) else {
-                throw NSError(domain: "FirebaseService", code: 6,
-                            userInfo: [NSLocalizedDescriptionKey: "Invalid date format"])
+            // Try multiple date format parsers
+            let iso8601Formatter = ISO8601DateFormatter()
+            
+            let ymdFormatter = DateFormatter()
+            ymdFormatter.dateFormat = "yyyy-MM-dd"
+            
+            let mdyFormatter = DateFormatter()
+            mdyFormatter.dateFormat = "MM/dd/yyyy"
+            
+            let dmyFormatter = DateFormatter()
+            dmyFormatter.dateFormat = "dd/MM/yyyy"
+            
+            let formatters: [Any] = [iso8601Formatter, ymdFormatter, mdyFormatter, dmyFormatter]
+            
+            // Try each formatter
+            for formatter in formatters {
+                if let date = (formatter as? ISO8601DateFormatter)?.date(from: json.date) ?? 
+                             (formatter as? DateFormatter)?.date(from: json.date) {
+                    let items = json.items.map { "\($0.name): $\(String(format: "%.2f", $0.price))" }
+                    
+                    return Receipt(
+                        id: UUID().uuidString,
+                        date: date,
+                        total: json.total,
+                        items: items,
+                        storeName: json.storeName
+                    )
+                }
             }
             
-            let items = json.items.map { "\($0.name): $\(String(format: "%.2f", $0.price))" }
-            
-            return Receipt(
-                id: UUID().uuidString,
-                date: date,
-                total: json.total,
-                items: items,
-                storeName: "Unknown Store"
-            )
+            // If no formatter worked, throw the error
+            throw NSError(domain: "FirebaseService", code: 6,
+                         userInfo: [NSLocalizedDescriptionKey: "Invalid date format: \(json.date)"])
         } catch {
             print("JSON Parsing Error: \(error.localizedDescription)")
             throw error
@@ -147,9 +171,13 @@ class FirebaseService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
+        // Convert the date to start of day in UTC
+        let calendar = Calendar.current
+        let dateStart = calendar.startOfDay(for: receipt.date)
+        
         try await db.collection("receipts").document(receipt.id).setData([
             "userId": userId,
-            "date": receipt.date,
+            "date": Timestamp(date: dateStart),  // Use Timestamp instead of Date
             "total": receipt.total,
             "items": receipt.items,
             "storeName": receipt.storeName
@@ -163,15 +191,19 @@ class FirebaseService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
+        // Convert dates to Timestamp for Firestore query
+        let startTimestamp = Timestamp(date: startDate)
+        let endTimestamp = Timestamp(date: endDate)
+        
         let snapshot = try await db.collection("receipts")
             .whereField("userId", isEqualTo: userId)
-            .whereField("date", isGreaterThanOrEqualTo: startDate)
-            .whereField("date", isLessThanOrEqualTo: endDate)
+            .whereField("date", isGreaterThanOrEqualTo: startTimestamp)
+            .whereField("date", isLessThanOrEqualTo: endTimestamp)
             .getDocuments()
         
         return snapshot.documents.compactMap { document in
             let data = document.data()
-            guard let date = data["date"] as? Date,
+            guard let timestamp = data["date"] as? Timestamp,
                   let total = data["total"] as? Double,
                   let items = data["items"] as? [String],
                   let storeName = data["storeName"] as? String else {
@@ -179,7 +211,7 @@ class FirebaseService: ObservableObject {
             }
             return Receipt(
                 id: document.documentID,
-                date: date,
+                date: timestamp.dateValue(),
                 total: total,
                 items: items,
                 storeName: storeName
