@@ -3,12 +3,28 @@ import FirebaseFirestore
 import FirebaseVertexAI
 import UIKit
 import FirebaseAuth
+import Foundation
 
-class FirebaseService {
+@MainActor
+class FirebaseService: ObservableObject {
     static let shared = FirebaseService()
     private let storage = Storage.storage()
     private let db = Firestore.firestore()
     private let model = VertexAI.vertexAI().generativeModel(modelName: "gemini-1.5-flash")
+    
+    private init() {}
+    
+    // Add this struct definition at the top level of the file, after the class declaration
+    struct ReceiptJSON: Codable {
+        let date: String
+        let total: Double
+        let items: [ItemJSON]
+        
+        struct ItemJSON: Codable {
+            let name: String
+            let price: Double
+        }
+    }
     
     func uploadReceiptImage(_ image: UIImage) async throws -> String {
         let currentUser = Auth.auth().currentUser
@@ -93,34 +109,31 @@ class FirebaseService {
                          userInfo: [NSLocalizedDescriptionKey: "Failed to convert response to data"])
         }
         
-        struct ReceiptJSON: Codable {
-            let date: String
-            let total: Double
-            let items: [ItemJSON]
-            
-            struct ItemJSON: Codable {
-                let name: String
-                let price: Double
-            }
-        }
-        
         do {
             let decoder = JSONDecoder()
             let receiptJSON = try decoder.decode(ReceiptJSON.self, from: jsonData)
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            guard let date = dateFormatter.date(from: receiptJSON.date) else {
+            return try parseReceipt(from: receiptJSON)
+        } catch {
+            print("JSON Parsing Error: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    func parseReceipt(from json: ReceiptJSON) throws -> Receipt {
+        do {
+            guard let date = ISO8601DateFormatter().date(from: json.date) else {
                 throw NSError(domain: "FirebaseService", code: 6,
                             userInfo: [NSLocalizedDescriptionKey: "Invalid date format"])
             }
             
-            let items = receiptJSON.items.map { "\($0.name): $\(String(format: "%.2f", $0.price))" }
+            let items = json.items.map { "\($0.name): $\(String(format: "%.2f", $0.price))" }
             
             return Receipt(
+                id: UUID().uuidString,
                 date: date,
-                total: receiptJSON.total,
-                items: items
+                total: json.total,
+                items: items,
+                storeName: "Unknown Store"
             )
         } catch {
             print("JSON Parsing Error: \(error.localizedDescription)")
@@ -134,33 +147,55 @@ class FirebaseService {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        try await db.collection("receipts").document(receipt.id.uuidString).setData([
+        try await db.collection("receipts").document(receipt.id).setData([
             "userId": userId,
             "date": receipt.date,
             "total": receipt.total,
-            "items": receipt.items
+            "items": receipt.items,
+            "storeName": receipt.storeName
         ])
     }
     
-    func fetchReceipts() async throws -> [Receipt] {
+    func fetchReceipts(from startDate: Date = Date.distantPast, 
+                       to endDate: Date = Date()) async throws -> [Receipt] {
         guard let userId = Auth.auth().currentUser?.uid else {
-            throw NSError(domain: "FirebaseService", code: 2, 
+            throw NSError(domain: "FirebaseService", code: 2,
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
         let snapshot = try await db.collection("receipts")
             .whereField("userId", isEqualTo: userId)
-            .order(by: "date", descending: true)
+            .whereField("date", isGreaterThanOrEqualTo: startDate)
+            .whereField("date", isLessThanOrEqualTo: endDate)
             .getDocuments()
         
-        return snapshot.documents.map { document in
+        return snapshot.documents.compactMap { document in
             let data = document.data()
-            let date = (data["date"] as? Timestamp)?.dateValue() ?? Date()
-            let total = data["total"] as? Double ?? 0.0
-            let items = data["items"] as? [String] ?? []
-            
-            return Receipt(date: date, total: total, items: items)
+            guard let date = data["date"] as? Date,
+                  let total = data["total"] as? Double,
+                  let items = data["items"] as? [String],
+                  let storeName = data["storeName"] as? String else {
+                return nil
+            }
+            return Receipt(
+                id: document.documentID,
+                date: date,
+                total: total,
+                items: items,
+                storeName: storeName
+            )
         }
+    }
+    
+    func processReceipt(_ imageData: Data) async throws -> Receipt {
+        // Add your receipt processing logic here
+        // This is a placeholder implementation
+        return Receipt(
+            date: Date(),
+            total: 0.0,
+            items: [],
+            storeName: "Processing..."
+        )
     }
 }
 

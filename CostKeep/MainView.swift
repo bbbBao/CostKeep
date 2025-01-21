@@ -125,7 +125,7 @@ struct MainView: View {
     
     private func loadReceipts() async {
         do {
-            scannedReceipts = try await FirebaseService.shared.fetchReceipts()
+            scannedReceipts = try await FirebaseService.shared.fetchReceipts(from: Date.distantPast, to: Date())
         } catch {
             await MainActor.run {
                 errorMessage = error.localizedDescription

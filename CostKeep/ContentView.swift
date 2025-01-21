@@ -13,22 +13,11 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authService.isAuthenticated {
-                MainView()  // Your existing receipt scanning view
+                HomeView()
             } else {
                 LoginView()
             }
         }
-    }
-}
-
-struct Receipt: Identifiable, Codable {
-    let id = UUID()
-    let date: Date
-    let total: Double
-    let items: [String]
-    
-    enum CodingKeys: String, CodingKey {
-        case id, date, total, items
     }
 }
 
