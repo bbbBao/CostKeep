@@ -13,7 +13,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authService.isAuthenticated {
-                HomeView()
+                MainView()
             } else {
                 LoginView()
             }
