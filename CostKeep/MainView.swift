@@ -133,6 +133,21 @@ struct MainView: View {
                     CalendarPopover(selectedDate: $selectedDate, isPresented: $showFullCalendar)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                
+                if isProcessing {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .overlay {
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.5)
+                                    .tint(.white)
+                                Text("Processing receipt, this may take a few seconds...")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                }
             }
             .animation(.easeInOut(duration: 0.2), value: showFullCalendar)
         }
@@ -170,7 +185,9 @@ struct MainView: View {
                 await MainActor.run {
                     selectedImage = nil
                     isProcessing = false
-                    // Reload receipts for the current date
+                    // Update selected date to match the receipt's date
+                    selectedDate = Calendar.current.startOfDay(for: receipt.date)
+                    // Reload receipts for the new date
                     loadReceiptsForDate(selectedDate)
                 }
             } catch {
@@ -245,7 +262,10 @@ struct CalendarPopover: View {
     
     var body: some View {
         VStack {
-            DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date])
+            DatePicker("Select Date", 
+                      selection: $selectedDate,
+                      in: ...Date(), // This restricts the date range to past and present
+                      displayedComponents: [.date])
                 .datePickerStyle(.graphical)
                 .padding()
                 .background(
@@ -256,7 +276,7 @@ struct CalendarPopover: View {
                 .frame(width: UIScreen.main.bounds.width - 40)
                 .frame(maxHeight: 380)
         }
-        .padding(.top, 150) // Position from top of screen
+        .padding(.top, 150)
         .onChange(of: selectedDate) { _, _ in
             withAnimation(.easeInOut(duration: 0.2)) {
                 isPresented = false

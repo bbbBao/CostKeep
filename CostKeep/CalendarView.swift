@@ -13,6 +13,10 @@ struct CalendarView: View {
         }
     }
     
+    private func isFutureDate(_ date: Date) -> Bool {
+        return calendar.startOfDay(for: date) > calendar.startOfDay(for: Date())
+    }
+    
     var body: some View {
         HStack(spacing: 0) {
             ForEach(weekDates, id: \.self) { date in
@@ -20,7 +24,7 @@ struct CalendarView: View {
                     // Day of week (S, M, T, etc.)
                     Text(date.formatted(.dateTime.weekday(.narrow)))
                         .font(.system(size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundColor(isFutureDate(date) ? .gray.opacity(0.5) : .gray)
                     
                     // Day number
                     Text("\(calendar.component(.day, from: date))")
@@ -31,14 +35,18 @@ struct CalendarView: View {
                                 .fill(calendar.isDate(date, inSameDayAs: selectedDate) ? 
                                     Color.blue : Color.clear)
                         )
-                        .foregroundColor(calendar.isDate(date, inSameDayAs: selectedDate) ? 
-                            .white : .primary)
+                        .foregroundColor(
+                            isFutureDate(date) ? .gray.opacity(0.5) :
+                                calendar.isDate(date, inSameDayAs: selectedDate) ? .white : .primary
+                        )
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedDate = date
+                    if !isFutureDate(date) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedDate = date
+                        }
                     }
                 }
             }
