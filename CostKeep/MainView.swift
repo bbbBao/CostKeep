@@ -82,32 +82,7 @@ struct MainView: View {
                 CalendarView(selectedDate: $selectedDate)
                     .padding(.vertical)
                 
-                // Receipts List Header
-                HStack {
-                    Text("Time")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 16))
-                    Text("Receipts")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 16))
-                        .padding(.leading)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                
-                // Receipts List
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(receipts) { receipt in
-                            ReceiptCardView(receipt: receipt)
-                                .background(Color.white)
-                                .cornerRadius(12)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        }
-                    }
-                    .padding()
-                }
-                
+                ReceiptsListView(receipts: receipts)
                 // Custom Tab Bar
                 HStack {
                     Button(action: {}) {
@@ -278,6 +253,8 @@ struct CalendarPopover: View {
         }
     }
 }
+
+
 
 
 
