@@ -219,26 +219,26 @@ struct MainView: View {
                 let targetDate = Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 16))!
                 
                 var allReceipts = loadedReceipts
-                if Calendar.current.isDate(dateStart, inSameDayAs: targetDate) {
-                    // Add dummy receipts only for January 16, 2025
-                    let dummyReceipt = Receipt(
-                        id: "test-123",
-                        date: dateStart,
-                        total: 85.99,
-                        items: ["Groceries ($45.99)", "Electronics ($40.00)"],
-                        storeName: "Walmart",
-                        currency: "¥"
-                    )
-                    let dummyReceipt1 = Receipt(
-                        id: "test-1234",
-                        date: dateStart,
-                        total: 12.4,
-                        items: ["Food ($12.99)", "Electronics ($40.00)", "Games ($40.00)", "Meat ($40.00)"],
-                        storeName: "Costco",
-                        currency: "$"
-                    )
-                    allReceipts += [dummyReceipt, dummyReceipt1]
-                }
+                // if Calendar.current.isDate(dateStart, inSameDayAs: targetDate) {
+                //     // Add dummy receipts only for January 16, 2025
+                //     let dummyReceipt = Receipt(
+                //         id: "test-123",
+                //         date: dateStart,
+                //         total: 85.99,
+                //         items: ["Groceries ($45.99)", "Electronics ($40.00)"],
+                //         storeName: "Walmart",
+                //         currency: "¥"
+                //     )
+                //     let dummyReceipt1 = Receipt(
+                //         id: "test-1234",
+                //         date: dateStart,
+                //         total: 12.4,
+                //         items: ["Food ($12.99)", "Electronics ($40.00)", "Games ($40.00)", "Meat ($40.00)"],
+                //         storeName: "Costco",
+                //         currency: "$"
+                //     )
+                //     allReceipts += [dummyReceipt, dummyReceipt1]
+                // }
                 
                 // Update the receipts on the main thread
                 await MainActor.run {

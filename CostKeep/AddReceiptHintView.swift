@@ -10,10 +10,11 @@ struct AddReceiptHintView: View {
             VStack(spacing: 0) {
                 Text(message)
                     .font(.system(size: 16))
+                    .foregroundColor(.primary)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
+                            .fill(Color(uiColor: .systemGray6))
                             .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 0)
                     )
                 
@@ -24,7 +25,7 @@ struct AddReceiptHintView: View {
                     path.addLine(to: CGPoint(x: 40, y: 0))
                     path.closeSubpath()
                 }
-                .fill(Color.white)
+                .fill(Color(uiColor: .systemGray6))
                 .frame(width: 40, height: 15)
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 0)
             }

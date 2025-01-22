@@ -28,7 +28,7 @@ struct ReceiptCardView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isFirst ? Color.blue : Color(UIColor.systemGray6))
             )
-            .foregroundColor(isFirst ? .white : .black)
+            .foregroundColor(isFirst ? .white : .primary)
         }
     }
 }

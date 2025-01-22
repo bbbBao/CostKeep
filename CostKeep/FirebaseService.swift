@@ -68,9 +68,10 @@ class FirebaseService: ObservableObject {
     }
     
     func processReceiptImage(_ image: UIImage) async throws -> Receipt {
-        // Upload image to Firebase Storage
-        _ = try await uploadReceiptImage(image)
+        // First upload the image and get URL
+        let imageURL = try await uploadReceiptImage(image)
         
+        // Process receipt with Vertex AI
         let prompt = """
         This is a receipt image. Please extract the following information:
         1. Store name (if not clear, use "Unknown Shop")
@@ -97,9 +98,15 @@ class FirebaseService: ObservableObject {
                             userInfo: [NSLocalizedDescriptionKey: "Failed to get response from Vertex AI"])
             }
             
-            print("Debug - Raw JSON response: \(jsonString)")
-            
-            return try parseReceiptJSON(jsonString)
+            var receipt = try parseReceiptJSON(jsonString)
+            receipt = Receipt(id: receipt.id,
+                             date: receipt.date,
+                             total: receipt.total,
+                             items: receipt.items,
+                             storeName: receipt.storeName,
+                             currency: receipt.currency,
+                             imageURL: imageURL)
+            return receipt
         } catch {
             print("Vertex AI Error: \(error.localizedDescription)")
             throw error
@@ -175,14 +182,14 @@ class FirebaseService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        // Use the exact date-time from the receipt instead of converting to start of day
         let receiptData: [String: Any] = [
-            "date": receipt.date,  // This preserves the full date-time
+            "date": receipt.date,
             "total": receipt.total,
             "items": receipt.items,
             "storeName": receipt.storeName,
             "currency": receipt.currency,
-            "userId": userId
+            "userId": userId,
+            "imageURL": receipt.imageURL ?? ""
         ]
         
         try await db.collection("receipts").document(receipt.id).setData(receiptData)
@@ -214,13 +221,17 @@ class FirebaseService: ObservableObject {
                   let currency = data["currency"] as? String else {
                 return nil
             }
+            
+            let imageURL = data["imageURL"] as? String
+            
             return Receipt(
                 id: document.documentID,
                 date: timestamp.dateValue(),
                 total: total,
                 items: items,
                 storeName: storeName,
-                currency: currency
+                currency: currency,
+                imageURL: imageURL
             )
         }
     }

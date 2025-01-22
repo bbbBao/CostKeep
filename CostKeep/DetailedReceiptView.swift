@@ -7,6 +7,8 @@ struct DetailedReceiptView: View {
     @State private var showFullImage = false
     @State private var showDeleteConfirmation = false
     @StateObject private var firebaseService = FirebaseService.shared
+    @State private var receiptImage: UIImage?
+    @State private var isLoadingImage = false
     
     var body: some View {
         ScrollView {
@@ -16,15 +18,23 @@ struct DetailedReceiptView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(UIColor.systemGray6))
                     
-                    // Placeholder for receipt image
-                    Image(systemName: "doc.text")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 200)
-                        .foregroundColor(.gray)
-                        .onTapGesture {
-                            showFullImage = true
-                        }
+                    if let image = receiptImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 200)
+                            .onTapGesture {
+                                showFullImage = true
+                            }
+                    } else if isLoadingImage {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "doc.text")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 200)
+                            .foregroundColor(.gray)
+                    }
                 }
                 .frame(height: 200)
                 
@@ -123,23 +133,50 @@ struct DetailedReceiptView: View {
             Text("Are you sure you want to delete this receipt? This action cannot be undone.")
         }
         
+        .onAppear {
+            loadReceiptImage()
+        }
         .sheet(isPresented: $showFullImage) {
-            // Full size image view
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                // Placeholder for full-size receipt image
-                Image(systemName: "doc.text")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundColor(.white)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showFullImage = false
+            if let image = receiptImage {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") {
+                            showFullImage = false
+                        }
+                        .foregroundColor(.white)
                     }
-                    .foregroundColor(.white)
+                }
+            }
+        }
+    }
+    
+    private func loadReceiptImage() {
+        guard let imageURLString = receipt.imageURL,
+              let imageURL = URL(string: imageURLString) else {
+            print("Debug: No image URL available")
+            return
+        }
+        
+        isLoadingImage = true
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: imageURL)
+                if let image = UIImage(data: data) {
+                    await MainActor.run {
+                        self.receiptImage = image
+                        self.isLoadingImage = false
+                    }
+                }
+            } catch {
+                print("Error loading image: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.isLoadingImage = false
                 }
             }
         }
