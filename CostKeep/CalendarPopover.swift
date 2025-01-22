@@ -75,7 +75,7 @@ struct CalendarPopover: View {
         .frame(width: popoverWidth, height: popoverHeight)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(UIColor.systemBackground))
+                .fill(Color(uiColor: .secondarySystemBackground))
                 .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 2)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
