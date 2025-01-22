@@ -25,6 +25,10 @@ struct MainView: View {
         receipts.sorted { $0.date > $1.date }
     }
     
+    private var datesWithReceipts: Set<Date> {
+        Set(receipts.map { Calendar.current.startOfDay(for: $0.date) })
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -48,6 +52,9 @@ struct MainView: View {
                     // Left side with date - tappable for calendar
                     Button(action: {
                         showFullCalendar.toggle()
+                        if showFullCalendar {
+                            loadReceiptsForDate(selectedDate, loadFullMonth: true)
+                        }
                     }) {
                         HStack(alignment: .bottom, spacing: 8) {
                             Text("\(Calendar.current.component(.day, from: selectedDate))")
@@ -88,12 +95,16 @@ struct MainView: View {
                 .padding(.top, 20)
                 
                 // Week Calendar Strip
-                CalendarView(selectedDate: $selectedDate)
+                CalendarView(selectedDate: $selectedDate, datesWithReceipts: datesWithReceipts)
                     .padding(.vertical)
                 
-                ReceiptsListView(receipts: sortedReceipts) { 
-                    loadReceiptsForDate(selectedDate)
-                }
+                ReceiptsListView(
+                    receipts: sortedReceipts,
+                    selectedDate: selectedDate,
+                    onReceiptDeleted: { 
+                        loadReceiptsForDate(selectedDate)
+                    }
+                )
                 // Custom Tab Bar
                 HStack {
                     Button(action: {}) {
@@ -131,9 +142,17 @@ struct MainView: View {
                                 showFullCalendar = false
                             }
                         }
+                        .transition(.opacity)
                     
-                    CalendarPopover(selectedDate: $selectedDate, isPresented: $showFullCalendar)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                    CalendarPopover(
+                        selectedDate: $selectedDate, 
+                        isPresented: $showFullCalendar,
+                        datesWithReceipts: datesWithReceipts
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top),
+                        removal: .move(edge: .bottom)
+                    ))
                 }
                 
                 if isProcessing {
@@ -203,51 +222,37 @@ struct MainView: View {
         }
     }
     
-    private func loadReceiptsForDate(_ date: Date) {
+    private func loadReceiptsForDate(_ date: Date, loadFullMonth: Bool = false) {
         print("Loading receipts for date: \(date)")
         Task {
             do {
-                let dateStart = Calendar.current.startOfDay(for: date)
-                let dateEnd = Calendar.current.date(byAdding: .day, value: 1, to: dateStart)!
+                let calendar = Calendar.current
+                let dateRange: (start: Date, end: Date)
                 
-                let loadedReceipts = try await FirebaseService.shared.fetchReceipts(
-                    from: dateStart,
-                    to: dateEnd
-                )
-                
-                // For testing: Only add dummy receipts for January 16, 2025
-                let targetDate = Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 16))!
-                
-                var allReceipts = loadedReceipts
-                // if Calendar.current.isDate(dateStart, inSameDayAs: targetDate) {
-                //     // Add dummy receipts only for January 16, 2025
-                //     let dummyReceipt = Receipt(
-                //         id: "test-123",
-                //         date: dateStart,
-                //         total: 85.99,
-                //         items: ["Groceries ($45.99)", "Electronics ($40.00)"],
-                //         storeName: "Walmart",
-                //         currency: "¥"
-                //     )
-                //     let dummyReceipt1 = Receipt(
-                //         id: "test-1234",
-                //         date: dateStart,
-                //         total: 12.4,
-                //         items: ["Food ($12.99)", "Electronics ($40.00)", "Games ($40.00)", "Meat ($40.00)"],
-                //         storeName: "Costco",
-                //         currency: "$"
-                //     )
-                //     allReceipts += [dummyReceipt, dummyReceipt1]
-                // }
-                
-                // Update the receipts on the main thread
-                await MainActor.run {
-                    self.receipts = allReceipts
+                if loadFullMonth {
+                    // Get the start and end of the month
+                    let components = calendar.dateComponents([.year, .month], from: date)
+                    guard let firstOfMonth = calendar.date(from: components),
+                          let lastOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: firstOfMonth) else {
+                        return
+                    }
+                    dateRange = (firstOfMonth, lastOfMonth)
+                } else {
+                    // Get the week range as before
+                    let weekday = calendar.component(.weekday, from: date)
+                    let weekStart = calendar.date(byAdding: .day, value: 1-weekday, to: date)!
+                    let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+                    dateRange = (weekStart, weekEnd)
                 }
                 
-                print("Debug: Date Start: \(dateStart)")
-                print("Debug: Date End: \(dateEnd)")
-                print("Debug: Number of receipts loaded: \(self.receipts.count)")
+                let loadedReceipts = try await FirebaseService.shared.fetchReceipts(
+                    from: dateRange.start,
+                    to: dateRange.end
+                )
+                
+                await MainActor.run {
+                    self.receipts = loadedReceipts
+                }
             } catch {
                 print("Error loading receipts: \(error.localizedDescription)")
                 await MainActor.run {
@@ -258,34 +263,7 @@ struct MainView: View {
     }
 }
 
-struct CalendarPopover: View {
-    @Binding var selectedDate: Date
-    @Binding var isPresented: Bool
-    
-    var body: some View {
-        VStack {
-            DatePicker("Select Date", 
-                      selection: $selectedDate,
-                      in: ...Date(), // This restricts the date range to past and present
-                      displayedComponents: [.date])
-                .datePickerStyle(.graphical)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.systemBackground))
-                        .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 2)
-                )
-                .frame(width: UIScreen.main.bounds.width - 40)
-                .frame(maxHeight: 380)
-        }
-        .padding(.top, 150)
-        .onChange(of: selectedDate) { _, _ in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isPresented = false
-            }
-        }
-    }
-}
+
 
 
 

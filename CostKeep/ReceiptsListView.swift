@@ -2,8 +2,15 @@ import SwiftUI
 
 struct ReceiptsListView: View {
     let receipts: [Receipt]
+    let selectedDate: Date
     let onReceiptDeleted: () -> Void
     @State private var showHint = true
+    
+    private var filteredReceipts: [Receipt] {
+        receipts.filter { receipt in
+            Calendar.current.isDate(receipt.date, inSameDayAs: selectedDate)
+        }
+    }
     
     let noReceiptsMessages = [
         "No receipts today - your wallet is taking a break! 💰",
@@ -38,7 +45,7 @@ struct ReceiptsListView: View {
                 
                 // Scrollable content area
                 ScrollView {
-                    if receipts.isEmpty {
+                    if filteredReceipts.isEmpty {
                         VStack {
                             Spacer()
                                 .frame(height: 100)
@@ -55,7 +62,7 @@ struct ReceiptsListView: View {
                         HStack(alignment: .top, spacing: 0) {
                             // Time Column
                             VStack(alignment: .leading, spacing: 24) {
-                                ForEach(receipts) { receipt in
+                                ForEach(filteredReceipts) { receipt in
                                     Text(receipt.date.formatted(date: .omitted, time: .shortened))
                                         .font(.system(size: 16))
                                         .padding(.vertical, 32)
@@ -65,7 +72,7 @@ struct ReceiptsListView: View {
                             
                             // Receipts Column
                             VStack(alignment: .leading, spacing: 16) {
-                                ForEach(Array(receipts.enumerated()), id: \.element.id) { index, receipt in
+                                ForEach(Array(filteredReceipts.enumerated()), id: \.element.id) { index, receipt in
                                     ReceiptCardView(
                                         receipt: receipt, 
                                         isFirst: index == 0,
@@ -79,7 +86,7 @@ struct ReceiptsListView: View {
                 }
             }
             
-            if receipts.isEmpty {
+            if filteredReceipts.isEmpty {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture {
