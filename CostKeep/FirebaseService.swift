@@ -18,13 +18,13 @@ class FirebaseService: ObservableObject {
     struct ReceiptJSON: Codable {
         let storeName: String
         let date: String
-        let total: Double
-        let currency: String
+        let total: String
+        let currency: String?
         let items: [ItemJSON]
         
         struct ItemJSON: Codable {
             let name: String
-            let price: Double
+            let price: String
         }
     }
     
@@ -98,6 +98,11 @@ class FirebaseService: ObservableObject {
                             userInfo: [NSLocalizedDescriptionKey: "Failed to get response from Vertex AI"])
             }
             
+            // Add debug logging
+            print("Debug - Gemini Raw Response:")
+            print(jsonString)
+            print("Debug - End of Gemini Response")
+            
             var receipt = try parseReceiptJSON(jsonString)
             receipt = Receipt(id: receipt.id,
                              date: receipt.date,
@@ -150,19 +155,27 @@ class FirebaseService: ObservableObject {
             
             let formatters: [Any] = [iso8601Formatter, ymdhmFormatter, mdyhmFormatter, dmyhmFormatter]
             
+            // Parse the total amount
+            let total = (Double(json.total.replacingOccurrences(of: ",", with: "")) ?? 0.0)
+            
+            // Convert item prices from strings to doubles
+            let items = json.items.map { item in
+                let price = Double(item.price.replacingOccurrences(of: ",", with: "")) ?? 0.0
+                return "\(item.name): \(json.currency ?? "¥")\(String(format: "%.2f", price))"
+            }
+            
             // Try each formatter
             for formatter in formatters {
                 if let date = (formatter as? ISO8601DateFormatter)?.date(from: json.date) ?? 
                              (formatter as? DateFormatter)?.date(from: json.date) {
-                    let items = json.items.map { "\($0.name): $\(String(format: "%.2f", $0.price))" }
                     
                     return Receipt(
                         id: UUID().uuidString,
                         date: date,
-                        total: json.total,
+                        total: total,
                         items: items,
-                        storeName: json.storeName,
-                        currency: json.currency
+                        storeName: json.storeName ?? "Unknown Shop",
+                        currency: json.currency ?? "¥" // Default to yen for Japanese receipts
                     )
                 }
             }
