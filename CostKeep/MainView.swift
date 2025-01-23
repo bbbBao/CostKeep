@@ -12,6 +12,9 @@ struct MainView: View {
     @State private var showFullCalendar = false
     @State private var showImageSourcePicker = false
     @State private var selectedImageSource: UIImagePickerController.SourceType = .camera
+    @State private var showUploadError = false
+    @State private var uploadErrorMessage = ""
+    @State private var uploadErrorLogs = ""
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -78,6 +81,13 @@ struct MainView: View {
         .sheet(isPresented: $showProfile) {
             UserProfileView()
         }
+        .sheet(isPresented: $showUploadError) {
+            ReceiptUploadErrorView(
+                errorMessage: uploadErrorMessage,
+                errorLogs: uploadErrorLogs,
+                isPresented: $showUploadError
+            )
+        }
         .onChange(of: selectedImage) { _, newImage in
             if let image = newImage {
                 processSelectedImage(image)
@@ -93,7 +103,7 @@ struct MainView: View {
     
     private func processSelectedImage(_ image: UIImage) {
         print("Debug: Starting image processing")
-        isProcessing = true  // Set loading state immediately
+        isProcessing = true
         Task {
             do {
                 print("Debug: Calling Firebase service")
@@ -105,17 +115,24 @@ struct MainView: View {
                 await MainActor.run {
                     selectedImage = nil
                     isProcessing = false
-                    // Update selected date to match the receipt's date
                     selectedDate = Calendar.current.startOfDay(for: receipt.date)
-                    // Reload receipts for the new date
                     loadReceiptsForDate(selectedDate)
                 }
             } catch {
                 print("Debug: Error processing image: \(error)")
                 await MainActor.run {
-                    errorMessage = error.localizedDescription
+                    uploadErrorMessage = "Unable to process receipt image. Please ensure:\n\n• The image contains a valid purchase receipt\n• The receipt image is clear and well-lit\n• All text is clearly visible and readable\n• The receipt is properly aligned in the frame"
+                    uploadErrorLogs = """
+                    Error Type: \(type(of: error))
+                    Error Description: \(error.localizedDescription)
+                    Debug Log:
+                    - Starting image processing
+                    - Error occurred during processing
+                    - Full error: \(error)
+                    """
                     selectedImage = nil
                     isProcessing = false
+                    showUploadError = true
                 }
             }
         }
