@@ -180,7 +180,7 @@ class FirebaseService: ObservableObject {
                         date: date,
                         total: total,
                         items: items,
-                        storeName: json.storeName ?? "Unknown Shop",
+                        storeName: json.storeName.isEmpty ? "Unknown Shop" : json.storeName,
                         currency: json.currency ?? "¥" // Default to yen for Japanese receipts
                     )
                 }
