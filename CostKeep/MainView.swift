@@ -93,8 +93,8 @@ struct MainView: View {
     
     private func processSelectedImage(_ image: UIImage) {
         print("Debug: Starting image processing")
+        isProcessing = true  // Set loading state immediately
         Task {
-            isProcessing = true
             do {
                 print("Debug: Calling Firebase service")
                 let receipt = try await FirebaseService.shared.processReceiptImage(image)
@@ -162,43 +162,38 @@ struct MainView: View {
     }
     
     private var overlayView: some View {
-        if showFullCalendar {
-            Color.black.opacity(0.2)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showFullCalendar = false
+        ZStack {
+            if showFullCalendar {
+                Color.black.opacity(0.2)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showFullCalendar = false
+                        }
                     }
-                }
-                .transition(.opacity)
+                
+                CalendarPopover(
+                    selectedDate: $selectedDate, 
+                    isPresented: $showFullCalendar,
+                    datesWithReceipts: datesWithReceipts
+                )
+            }
             
-            CalendarPopover(
-                selectedDate: $selectedDate, 
-                isPresented: $showFullCalendar,
-                datesWithReceipts: datesWithReceipts
-            )
-            .transition(.asymmetric(
-                insertion: .move(edge: .top),
-                removal: .move(edge: .bottom)
-            ))
-        }
-        
-        if isProcessing {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-                .overlay {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(.white)
-                        Text("Processing receipt, this may take a few seconds...")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
+            if isProcessing {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .overlay {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.white)
+                            Text("Processing receipt, this may take a few seconds...")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white)
+                        }
                     }
-                }
+            }
         }
-        
-        return Color.clear
     }
 }
 
