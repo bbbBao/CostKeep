@@ -76,19 +76,25 @@ class FirebaseService: ObservableObject {
         This is a receipt image. Please extract the following information:
         1. Store name (if not clear, use "Unknown Shop")
         2. Date and time of purchase (format as YYYY-MM-DD HH:mm, for example 2024-03-21 14:30)
-        3. Total amount
-        4. Currency symbol (e.g., $, ¥, €, £)
-        5. List of items with their prices
+        3. Total amount (as string, for example "1550")
+        4. Currency symbol (e.g., "$", "¥", "€", "£")
+           - If currency symbol is not visible, guess based on the receipt's language. For example:
+           - Japanese text → "¥"
+           - English text (US) → "$"
+           - English text (UK) → "£"
+           - European languages → "€"
+        5. List of items with their prices (prices as strings)
         Format the response as JSON with the following structure:
         {
             "storeName": "Store Name",
             "date": "YYYY-MM-DD HH:mm",
-            "total": 00.00,
-            "currency": "$",
+            "total": "00.00",
+            "currency": "¥",
             "items": [
-                {"name": "item name", "price": 00.00}
+                {"name": "item name", "price": "00.00"}
             ]
         }
+        Note: All numeric values should be strings enclosed in quotes.
         """
         
         do {
