@@ -10,7 +10,8 @@ struct MainView: View {
     @State private var isProcessing = false
     @State private var errorMessage: String?
     @State private var showFullCalendar = false
-    @State private var calendarAnchorPoint: CGPoint = .zero
+    @State private var showImageSourcePicker = false
+    @State private var selectedImageSource: UIImagePickerController.SourceType = .camera
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -32,159 +33,57 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with large date display
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(greeting),")
-                            .font(.system(size: 34, weight: .bold))
-                        Spacer()
-                    }
-                    if let user = authService.currentUser {
-                        Text(user.email?.components(separatedBy: "@").first ?? "User")
-                            .font(.system(size: 34, weight: .bold))
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 20)
+                HeaderView(greeting: greeting, user: authService.currentUser)
                 
-                // Date Header
-                HStack(alignment: .center, spacing: 8) {
-                    // Left side with date - tappable for calendar
-                    Button(action: {
-                        showFullCalendar.toggle()
-                        if showFullCalendar {
-                            loadReceiptsForDate(selectedDate, loadFullMonth: true)
-                        }
-                    }) {
-                        HStack(alignment: .bottom, spacing: 8) {
-                            Text("\(Calendar.current.component(.day, from: selectedDate))")
-                                .font(.system(size: 60, weight: .bold))
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(alignment: .center, spacing: 4) {
-                                    Text(selectedDate.formatted(.dateTime.weekday(.wide)))
-                                        .font(.system(size: 16))
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.gray)
-                                }
-                                Text(selectedDate.formatted(.dateTime.month().year()))
-                                    .font(.system(size: 16))
-                            }
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    // Today button
-                    Button(action: {
-                        withAnimation {
-                            selectedDate = Date()
-                        }
-                    }) {
-                        Text("Today")
-                            .font(.system(size: 16))
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.blue.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 20)
+                DateHeaderView(
+                    selectedDate: $selectedDate,
+                    showFullCalendar: $showFullCalendar,
+                    loadReceiptsForDate: loadReceiptsForDate
+                )
                 
-                // Week Calendar Strip
                 CalendarView(selectedDate: $selectedDate, datesWithReceipts: datesWithReceipts)
                     .padding(.vertical)
                 
                 ReceiptsListView(
                     receipts: sortedReceipts,
                     selectedDate: selectedDate,
-                    onReceiptDeleted: { 
+                    onReceiptDeleted: {
                         loadReceiptsForDate(selectedDate)
                     }
                 )
-                // Custom Tab Bar
-                HStack {
-                    Button(action: {}) {
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.blue)
-                    }
-                    Spacer()
-                    Button(action: { showImagePicker = true }) {
-                        Circle()
-                            .fill(Color.blue)
-                            .frame(width: 56, height: 56)
-                            .overlay(
-                                Image(systemName: "plus")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                    }
-                    Spacer()
-                    Button(action: { showProfile = true }) {
-                        Image(systemName: "person")
-                            .font(.system(size: 24))
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding(.horizontal, 40)
-                .padding(.vertical, 20)
-            }
-            .overlay {
-                if showFullCalendar {
-                    Color.black.opacity(0.2)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showFullCalendar = false
-                            }
-                        }
-                        .transition(.opacity)
-                    
-                    CalendarPopover(
-                        selectedDate: $selectedDate, 
-                        isPresented: $showFullCalendar,
-                        datesWithReceipts: datesWithReceipts
-                    )
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top),
-                        removal: .move(edge: .bottom)
-                    ))
-                }
                 
-                if isProcessing {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                        .overlay {
-                            VStack(spacing: 16) {
-                                ProgressView()
-                                    .scaleEffect(1.5)
-                                    .tint(.white)
-                                Text("Processing receipt, this may take a few seconds...")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                }
+                CustomTabBar(
+                    showImageSourcePicker: { showImageSourcePicker = true },
+                    showProfile: { showProfile = true }
+                )
             }
-            .animation(.easeInOut(duration: 0.2), value: showFullCalendar)
+            .overlay(overlayView)
+        }
+        .confirmationDialog("Choose Image Source", isPresented: $showImageSourcePicker) {
+            Button("Camera") {
+                selectedImageSource = .camera
+                showImagePicker = true
+            }
+            Button("Photo Library") {
+                selectedImageSource = .photoLibrary
+                showImagePicker = true
+            }
         }
         .sheet(isPresented: $showImagePicker) {
-            ImagePicker(image: $selectedImage)
+            ImagePicker(
+                image: $selectedImage,
+                sourceType: selectedImageSource
+            )
         }
         .sheet(isPresented: $showProfile) {
             UserProfileView()
         }
-        .onChange(of: selectedImage) { oldImage, newImage in
+        .onChange(of: selectedImage) { _, newImage in
             if let image = newImage {
                 processSelectedImage(image)
             }
         }
-        .onChange(of: selectedDate) { oldDate, newDate in
-            print("Date changed from \(oldDate) to \(newDate)")
+        .onChange(of: selectedDate) { _, newDate in
             loadReceiptsForDate(newDate)
         }
         .onAppear {
@@ -260,6 +159,59 @@ struct MainView: View {
                 }
             }
         }
+    }
+    
+    private var overlayView: some View {
+        if showFullCalendar {
+            Color.black.opacity(0.2)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showFullCalendar = false
+                    }
+                }
+                .transition(.opacity)
+            
+            CalendarPopover(
+                selectedDate: $selectedDate, 
+                isPresented: $showFullCalendar,
+                datesWithReceipts: datesWithReceipts
+            )
+            .transition(.asymmetric(
+                insertion: .move(edge: .top),
+                removal: .move(edge: .bottom)
+            ))
+        }
+        
+        if isProcessing {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .overlay {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.white)
+                        Text("Processing receipt, this may take a few seconds...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                }
+        }
+        
+        return Color.clear
+    }
+}
+
+struct CameraButtonView: View {
+    var body: some View {
+        Circle()
+            .fill(Color.blue)
+            .frame(width: 56, height: 56)
+            .overlay(
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+            )
     }
 }
 

@@ -8,5 +8,7 @@
 	<string>N5NK24SJF3</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to import receipt images for expense tracking.</string>
 </dict>
 </plist>
