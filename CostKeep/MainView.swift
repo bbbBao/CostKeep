@@ -15,6 +15,13 @@ struct MainView: View {
     @State private var showUploadError = false
     @State private var uploadErrorMessage = ""
     @State private var uploadErrorLogs = ""
+    @State private var showGreeting = true
+    
+    private var selectedDateTotal: Double {
+        receipts
+            .filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
+            .reduce(0) { $0 + $1.total }
+    }
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -22,6 +29,23 @@ struct MainView: View {
         case 0..<12: return "Good Morning"
         case 12..<17: return "Good Afternoon"
         default: return "Good Evening"
+        }
+    }
+    
+    private var headerText: String {
+        if showGreeting {
+            return greeting
+        }
+
+        let totalString = String(format: "¥%.2f", selectedDateTotal)
+        if Calendar.current.isDateInToday(selectedDate) {
+            return "Today's Total: \(totalString)"
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .none
+            // let dateString = dateFormatter.string(from: selectedDate)
+            return "Total for This Day: \(totalString)"
         }
     }
     
@@ -36,7 +60,11 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                HeaderView(greeting: greeting, user: authService.currentUser)
+                HeaderView(
+                    greeting: headerText,
+                    user: authService.currentUser,
+                    showUserName: showGreeting
+                )
                 
                 DateHeaderView(
                     selectedDate: $selectedDate,
@@ -97,6 +125,12 @@ struct MainView: View {
             loadReceiptsForDate(newDate)
         }
         .onAppear {
+            showGreeting = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation {
+                    showGreeting = false
+                }
+            }
             loadReceiptsForDate(selectedDate)
         }
     }

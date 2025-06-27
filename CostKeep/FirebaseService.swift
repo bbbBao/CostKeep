@@ -10,7 +10,7 @@ class FirebaseService: ObservableObject {
     static let shared = FirebaseService()
     private let storage = Storage.storage()
     private let db = Firestore.firestore()
-    private let model = VertexAI.vertexAI().generativeModel(modelName: "gemini-1.5-flash")
+    private let model = VertexAI.vertexAI().generativeModel(modelName: "gemini-2.0-flash")
     
     private init() {}
     
